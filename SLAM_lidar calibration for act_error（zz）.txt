@@ -1,0 +1,45 @@
+
+1. 背景
+
+  激光雷达完成一帧360°的扫描需要一定的时间（通常为0.05s至0.2s），若在一帧数据的扫描过程中，机器人发生大幅度的运动，会导致扫描到的点云产生严重的变形，严重影响建图精度。因此，对运动畸变进行补偿与校正能显著提高建图的鲁棒性。
+  具体原理讲解见:SLAM学习日志(二) 2D(单线)激光雷达运动畸变校正(2 原理篇)
+2. 利用IMU进行畸变校正的方法
+
+  首先，订阅IMU消息，将最新的IMU消息加入固定长度的循环队列中。接收到激光雷达数据时，解析激光雷达数据帧中每一个激光雷达扫描点的时间戳。在IMU队列中查找在时间上相邻的两帧IMU数据，通过球面线性插值的方式计算该扫描点时刻激光雷达的姿态。最后，通过齐次坐标变换将激光点坐标变换至统一的坐标系下。
+3. 效果
+
+以下为单帧点云的校正效果，红色的是原始点云，白色的是校正后的点云。
+效果
+以下为室内在剧烈运动下的建图效果对比，实际运动轨迹边原地左右自转边前进。左图使用的是原始数据，右图使用的是校正后的数据。该数据包的链接：百度网盘，提取码 jimf
+
+在这里插入图片描述
+4. 源码
+
+见个人github仓库 链接
+5. 参数解释
+参数名	类型	解释
+lidar_topic	string	订阅的激光数据话题名
+lidar_msg_delay_time	double	雷达数据传输滞后的估计，单位毫秒，一般在10ms内
+scan_direction_clockwise	bool	激光雷达扫描旋转方向，true为顺时针，false为逆时针；方向不对会增大畸变
+imu_topic	string	订阅的imu话题名
+imu_frequency	double	估计的imu发布频率，仅用来确定队列长度，不需要很精确
+output_frame_id	string	输出消息的frame_id
+pub_raw_scan_pointcloud	bool	是否发布校正前的点云
+pub_laserscan	bool	是否将校正后的数据重新封装为LaserScan消息发布
+laserscan_angle_increment	double	接上条，发布的LaserScan消息的角度分辨率，分辨率越小，转换精度越高，单位为弧度（空白数据用nan填充）
+use_range_filter	bool	是否限定输出的扫描距离
+range_filter_min	double	扫描距离的最小值
+range_filter_max	double	扫描距离的最大值
+use_angle_filter	bool	是否限定输出的角度范围，默认为 − π -\pi −π到 + π +\pi +π
+angle_filter_min	double	扫描角度的最小值，单位为弧度
+angle_filter_max	double	扫描角度的最大值，单位为弧度
+use_radius_outlier_filter	bool	是否使用PCL库的RadiusOutlierRemoval滤波器，用来移除离群点
+radius_outlier_filter_search_radius	double	RadiusOutlierRemoval滤波器参数，搜索半径
+radius_outlier_filter_min_neighbors	double	RadiusOutlierRemoval滤波器参数，有效点的最少近邻点数量
+
+————————————————
+
+版权声明：本文为CSDN博主「大象威武」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+
+原文链接：https://blog.csdn.net/elephant_why/article/details/105209320
+
